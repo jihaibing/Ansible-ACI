@@ -1,0 +1,19 @@
+---
+# Demo ACI
+- hosts: controller
+  remote_user: admin
+  tasks:
+    - name: Add a new tenant
+      connection: local
+      gather_facts: no
+      aci_tenant:
+        hostname: 10.188.28.4
+        username: admin
+        password: zse4XDR%
+        tenant: Ansible2
+        description: Production tenant
+        state: present
+        use_ssl: false
+        use_proxy: false
+        validate_certs: false
+        protocol: https
