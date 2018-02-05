@@ -1,0 +1,370 @@
+
+---
+# Demo ACI
+
+- name: ACI Network Config
+  hosts: controller # predefine in ansible "hosts"
+  connection: local
+  gather_facts: no
+  remote_user: admin
+
+  vars:
+      tenant_name: ansible
+      vrf_name: vrf_ansible
+      hostname: X.X.X.X
+      username: admin
+      password: cisco,123
+      bd:
+          name: bd_ansible_1
+          gateway: 9.9.9.1
+          mask: 24
+          scope: private
+      protocol: https
+      state: absent
+
+
+  tasks:
+    - name: Add a new tenant
+      tags: create,network
+      aci_tenant:
+        tenant_name: "{{ tenant_name }}"
+        description: 'Production tenant'
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        protocol: "{{ protocol }}"
+        state: "{{ state }}"
+        use_ssl: false
+        use_proxy: false
+        validate_certs: false
+
+    - name: Add a new VRF to a tenant
+      tags: create,network
+      aci_vrf:
+        vrf_name: "{{ vrf_name }}"
+        tenant_name: "{{ tenant_name }}"
+        description: 'Lab VRF'
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        protocol: "{{ protocol }}"
+        state: "{{ state }}"
+        use_ssl: false
+        use_proxy: false
+        validate_certs: false
+        policy_control_preference: enforced
+        policy_control_direction: ingress
+
+    - name: Add a new Bridge Domain
+      tags: create,network
+      aci_bd:
+        tenant_name: "{{ tenant_name }}"
+        vrf_name: "{{ vrf_name }}"
+        bd_name: "{{ bd.name }}"
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        protocol: "{{ protocol }}"
+        state: "{{ state }}"
+        use_ssl: false
+        use_proxy: false
+        validate_certs: false
+
+    - name: Add subnet to BD
+      tags: create,network
+      aci_bd_subnet:
+        tenant_name: "{{ tenant_name }}"
+        bd_name: "{{ bd.name }}"
+        gateway: "{{ bd.gateway }}"
+        mask: "{{ bd.mask }}"
+        scope: "{{ bd.scope }}"
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        protocol: "{{ protocol }}"
+        state: "{{ state }}"
+        use_ssl: false
+        use_proxy: false
+        validate_certs: false
+
+
+- name: ACI Application Config
+  hosts: controller
+  connection: local
+  gather_facts: no
+  remote_user: admin
+
+  vars:
+      tenant_name: ansible
+      vrf_name: vrf_ansible
+      hostname: 10.188.28.4
+      username: admin
+      password: zse4XDR%
+      bd:
+          name: bd_ansible_1
+          gateway: 9.9.9.1
+          mask: 24
+          scope: private
+      app_profile_name: app1
+      filter_name: Contract1_filter
+      entry_name: Contract1_entry
+      contract_name: Contract1
+      subject_name: Subject1
+      domain_name: PHY1
+      protocol: https
+      state: absent
+
+
+  tasks:
+    - name: Create ANP
+      tags: create,policy
+      aci_ap:
+        app_profile_name: "{{ app_profile_name }}"
+        tenant_name: "{{ tenant_name }}"
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        protocol: "{{ protocol }}"
+        state: "{{ state }}"
+        use_ssl: false
+        use_proxy: false
+        validate_certs: false
+
+    - name: Create EPGs
+      tags: create,policy
+      aci_epg:
+        app_profile_name: "{{ app_profile_name }}"
+        tenant_name: "{{ tenant_name }}"
+        epg_name: "{{ item }}"
+        bd_name: "{{ bd.name }}"
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        protocol: "{{ protocol }}"
+        state: "{{ state }}"
+        use_ssl: false
+        use_proxy: false
+        validate_certs: false
+      with_items:
+        - "web_epg"
+        - "db_epg"
+
+
+    - name: Create filter
+      tags: create,policy
+      aci_filter:
+        filter_name: "{{ filter_name }}"
+        tenant_name: "{{ tenant_name }}"
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        protocol: "{{ protocol }}"
+        state: "{{ state }}"
+        use_ssl: false
+        use_proxy: false
+        validate_certs: false
+
+    - name: Create filter entry
+      tags: create,policy
+      aci_filter_entry:
+        entry_name: "{{ entry_name }}"
+        tenant_name: "{{ tenant_name }}"
+        filter_name: "{{ filter_name }}"
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        protocol: "{{ protocol }}"
+        state: "{{ state }}"
+        use_ssl: false
+        use_proxy: false
+        validate_certs: false
+
+    - name: Create tenant contract
+      tags: create,policy
+      aci_contract:
+        tenant_name: "{{ tenant_name }}"
+        contract_name: "{{ contract_name }}"
+        scope: context
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        protocol: "{{ protocol }}"
+        state: "{{ state }}"
+        use_ssl: false
+        use_proxy: false
+        validate_certs: false
+
+    - name: Create contract subjects
+      tags: create,policy
+      aci_contract_subject:
+        tenant_name: "{{ tenant_name }}"
+        contract_name: "{{ contract_name }}"
+        subject_name: "{{ subject_name }}"
+        reverse_filter: yes
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        protocol: "{{ protocol }}"
+        state: "{{ state }}"
+        use_ssl: false
+        use_proxy: false
+        validate_certs: false
+
+    - name: Bind subject to filter
+      tags: create,policy
+      aci_contract_subject_to_filter:
+        tenant_name: "{{ tenant_name }}"
+        contract_name: "{{ contract_name }}"
+        subject_name: "{{ subject_name }}"
+        filter_name: "{{ filter_name }}"
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        protocol: "{{ protocol }}"
+        state: "{{ state }}"
+        use_ssl: false
+        use_proxy: false
+        validate_certs: false
+
+    - name: Bind web_epg with contract
+      tags: create,policy
+      aci_epg_to_contract:
+        tenant_name: "{{ tenant_name }}"
+        app_profile_name: "{{ app_profile_name }}"
+        epg_name: "{{ item }}"
+        contract_type: consumer
+        contract_name: "{{ contract_name }}"
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        protocol: "{{ protocol }}"
+        state: "{{ state }}"
+        use_ssl: false
+        use_proxy: false
+        validate_certs: false
+      with_items:
+          - "web_epg"
+
+
+    - name: Bind db_epg with contract
+      tags: create,policy
+      aci_epg_to_contract:
+        tenant_name: "{{ tenant_name }}"
+        app_profile_name: "{{ app_profile_name }}"
+        epg_name: "{{ item }}"
+        contract_type: provider
+        contract_name: "{{ contract_name }}"
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        protocol: "{{ protocol }}"
+        state: "{{ state }}"
+        use_ssl: false
+        use_proxy: false
+        validate_certs: false
+      with_items:
+          - "db_epg"
+
+    - name: Associate epg with domain
+      tags: create,policy
+      aci_epg_to_domain:
+        tenant_name: "{{ tenant_name }}"
+        app_profile_name: "{{ app_profile_name }}"
+        epg_name: "{{ item }}"
+        hostname: "{{ hostname }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        protocol: "{{ protocol }}"
+        state: "{{ state }}"
+        domain_name: "{{ domain_name }}"
+        domain_type: 'phys'
+#        aep_name: 'ACI-AEP'
+        use_ssl: false
+        use_proxy: false
+        validate_certs: false
+      with_items:
+          - "web_epg"
+          - "db_epg"
+
+#- name: ACI Access-policy Config
+#  hosts: controller
+#  connection: local
+#  gather_facts: no
+#  remote_user: admin
+
+#  tasks:
+#    - name: create vlan pool
+#      aci_intf_policy_l2:
+#        l2_policy_name: 'test'
+#        vlan_scope: 'global'
+#        hostname: "{{ hostname }}"
+#        username: "{{ username }}"
+#        password: "{{ password }}"
+#        protocol: "{{ protocol }}"
+#        state: "{{ state }}"
+#        use_ssl: false
+#        use_proxy: false
+#        validate_certs: false
+
+#    - name: create a new AEP
+#      aci_aep:
+#        aep: ACI-AEP
+#        description: test AAEP
+#        hostname: "{{ hostname }}"
+#        username: "{{ username }}"
+#        password: "{{ password }}"
+#        protocol: "{{ protocol }}"
+#        state: "{{ state }}"
+#        use_ssl: false
+#        use_proxy: false
+#        validate_certs: false
+
+
+#     - name: create physical domain
+#       aci_ physical_domain:
+#        domain: 'PHY4'
+#       hostname: "{{ hostname }}"
+#        username: "{{ username }}"
+#        password: "{{ password }}"
+#        protocol: "{{ protocol }}"
+#        state: "{{ state }}"
+#        use_ssl: false
+#        use_proxy: false
+#        validate_certs: false
+
+#    - name: create vlan pool
+#      connection: local
+#      gather_facts: no
+#      aci_vlan_pool:
+#        vlan_pool: "{{ vlan_pool }}"
+#        hostname: "{{ hostname }}"
+#        username: "{{ username }}"
+#        password: "{{ password }}"
+#        protocol: "{{ protocol }}"
+#        state: "{{ state }}"
+#        use_ssl: false
+#        use_proxy: false
+#        validate_certs: false
+
+
+#    - name: Deploy EPG
+#      connection: local
+#      gather_facts: no
+#      aci_epg_domain_binding:
+#        app_profile_name: "{{ app_profile_name }}"
+#        tenant_name: "{{ tenant_name }}"
+#        epg_name: "{{ epg_name }}"
+#        domain_profile: "{{ physical_domain }}"
+#        deploy_immediacy: immediate
+#        hostname: "{{ hostname }}"
+#        username: "{{ username }}"
+#        password: "{{ password }}"
+#        protocol: "{{ protocol }}"
+#        state: "{{ state }}"
+#        use_ssl: false
+#        use_proxy: false
+#        validate_certs: false
+#      with_items:
+#          - "{{ epg_name1 }}"
+#          - "{{ epg_name2 }}"
+
